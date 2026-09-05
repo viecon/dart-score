@@ -1,9 +1,12 @@
 import { createApp, ref, computed, toRaw, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { createGame, recordTurn, turnStatistics, MODES, CRICKET_TARGETS } from './game.js';
 import './style.css';
+import VictoryResult from './VictoryResult.js';
 createApp({
+ components:{VictoryResult},
  setup(){
   const game=ref(createGame(['玩家 1','玩家 2'])),undoStack=ref([]),total=ref(''),finalDouble=ref(false),error=ref(''),notice=ref('');
+  const resultRef=ref(null);
   const mode=ref('x01'),roundLimit=ref(8);
   const names=ref(['玩家 1','玩家 2']),initial=ref(501),doubleOut=ref(false),setupDialog=ref(null),scoreInput=ref(null);
   const current=computed(()=>game.value.players[game.value.current]);
@@ -34,7 +37,7 @@ createApp({
    }catch(e){error.value=e.message;focusScore();scoreInput.value?.select();}
   }
   function undo(){if(!undoStack.value.length)return;game.value=undoStack.value.pop();total.value='';error.value='';notice.value='已撤銷上一回合';finalDouble.value=false;focusScore();}
-  function configure(){names.value=game.value.players.map(p=>p.name);initial.value=game.value.initial;doubleOut.value=game.value.doubleOut;mode.value=game.value.mode;roundLimit.value=game.value.roundLimit;setupDialog.value.showModal();}
+  function configure(){resultRef.value?.close();names.value=game.value.players.map(p=>p.name);initial.value=game.value.initial;doubleOut.value=game.value.doubleOut;mode.value=game.value.mode;roundLimit.value=game.value.roundLimit;setupDialog.value.showModal();}
   function start(){game.value=createGame(names.value.map((n,i)=>n.trim()||`玩家 ${i+1}`),Number(initial.value),doubleOut.value,mode.value,Number(roundLimit.value));undoStack.value=[];total.value='';notice.value='';error.value='';setupDialog.value.close();focusScore();}
   function countPlayers(e){const count=Math.max(1,Math.min(16,Number(e.target.value)||1));names.value=Array.from({length:count},(_,i)=>names.value[i]??`玩家 ${i+1}`);}
   function shortcuts(e){
@@ -46,7 +49,7 @@ createApp({
   }
   onMounted(()=>{focusScore();window.addEventListener('keydown',shortcuts);});
   onUnmounted(()=>window.removeEventListener('keydown',shortcuts));
-  return{mode,roundLimit,MODES,CRICKET_TARGETS,modeLabel,inputLabel,placeholder,rule,inputHint,averageLabel,resultLabel,winnerNames,playerValue,progress,game,undoStack,total,finalDouble,error,notice,names,initial,doubleOut,setupDialog,scoreInput,current,stats,round,checkout,history,submit,undo,configure,start,countPlayers,focusScore};
+  return{resultRef,mode,roundLimit,MODES,CRICKET_TARGETS,modeLabel,inputLabel,placeholder,rule,inputHint,averageLabel,resultLabel,winnerNames,playerValue,progress,game,undoStack,total,finalDouble,error,notice,names,initial,doubleOut,setupDialog,scoreInput,current,stats,round,checkout,history,submit,undo,configure,start,countPlayers,focusScore};
  },
  template:`
  <div class="shell"><header class="topbar"><h1>飛鏢計分</h1><div class="header-actions"><span class="mode">{{modeLabel}}</span><button class="outline" @click="configure">新比賽 <kbd>Alt N</kbd></button></div></header>
@@ -54,7 +57,7 @@ createApp({
   <section class="players" aria-label="玩家分數"><article v-for="(p,i) in game.players" :key="i" class="player" :class="{active:game.winner===null?i===game.current:game.winners.includes(i)}"><div class="player-top"><h2>{{p.name}}</h2><span class="player-status">{{game.winners.includes(i)?(game.winners.length>1?'並列獲勝':'獲勝'):game.winner===null&&i===game.current?'投擲中':''}}</span></div><div class="player-score">{{playerValue(p)}}<small v-if="game.mode==='clock'&&p.target!==21">目標</small></div><div class="progress"><i :style="{width:progress(p)+'%'}"></i></div><div class="player-bottom"><span>{{averageLabel}} <b>{{stats[i].average}}</b></span><span>最高 <b>{{stats[i].best}}</b></span></div></article></section>
   <section v-if="game.mode==='cricket'" class="panel cricket-board" aria-label="Cricket 標記"><div class="table-scroll"><table><thead><tr><th>玩家</th><th v-for="target in CRICKET_TARGETS" :key="target">{{target===25?'牛眼':target}}</th><th>分數</th></tr></thead><tbody><tr v-for="(p,i) in game.players" :key="i" :class="{current:game.winner===null?i===game.current:game.winners.includes(i)}"><th scope="row">{{p.name}}</th><td v-for="target in CRICKET_TARGETS" :key="target" :class="{closed:p.marks[target]===3}" :aria-label="p.marks[target]===3?'已關閉':p.marks[target]+' 標記'">{{['—','／','×','⊗'][p.marks[target]]}}</td><td>{{p.score}}</td></tr></tbody></table></div></section>
   <section class="entry panel" aria-label="回合計分">
-   <div v-if="game.winner!==null" class="victory"><h2>{{winnerNames}} {{game.winners.length>1?'並列獲勝':'獲勝'}}</h2><p>{{stats[game.winner].rounds}} 回合 · {{averageLabel}} {{stats[game.winner].average}}</p><button class="primary" @click="configure">新比賽 <kbd>Enter</kbd></button></div>
+   <VictoryResult v-if="game.winner!==null" ref="resultRef" :game="game" :stats="stats" :mode-label="modeLabel" :average-label="averageLabel" @new-game="configure" @undo="undo" />
    <form v-else @submit.prevent="submit" class="score-form"><div class="entry-heading"><h2>{{current.name}}<small class="current-value">{{resultLabel}} {{playerValue(current)}}</small></h2><span>第 {{round}}{{game.mode==='countup'?' / '+game.roundLimit:''}} 回合</span></div><label for="turn-score">{{inputLabel}}</label><div class="score-input-row" :class="{'dart-input':game.mode==='cricket'}"><input ref="scoreInput" id="turn-score" v-model="total" type="text" :inputmode="game.mode==='cricket'?'text':'numeric'" autocomplete="off" :maxlength="game.mode==='cricket'?30:3" :placeholder="placeholder" :aria-invalid="!!error" aria-describedby="entry-message" autofocus><button type="submit" class="primary">記分 <kbd>Enter</kbd></button></div><p v-if="inputHint" class="input-hint">{{inputHint}}</p><label v-if="checkout" class="check"><input type="checkbox" v-model="finalDouble">最後一鏢為雙倍或 BULL <kbd>Alt D</kbd></label></form>
    <p id="entry-message" class="message" :class="{error}" role="status" aria-live="polite">{{error||notice}}</p><div class="entry-actions"><button class="text-button" @click="undo" :disabled="!undoStack.length">撤銷上一回合 <kbd>Ctrl / ⌘ Z</kbd></button><span v-if="rule" class="rule-note">{{rule}}</span></div>
   </section>
