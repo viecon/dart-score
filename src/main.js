@@ -45,7 +45,7 @@ createApp({
    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey){e.preventDefault();undo();}
    if(e.altKey&&e.key.toLowerCase()==='n'){e.preventDefault();configure();}
    if(e.altKey&&e.key.toLowerCase()==='d'&&checkout.value){e.preventDefault();finalDouble.value=!finalDouble.value;focusScore();}
-   if(e.key==='Enter'&&game.value.winner!==null){e.preventDefault();configure();}
+   if(e.key==='Enter'&&game.value.winner!==null&&!e.target.closest?.('button')){e.preventDefault();configure();}
   }
   onMounted(()=>{focusScore();window.addEventListener('keydown',shortcuts);});
   onUnmounted(()=>window.removeEventListener('keydown',shortcuts));
@@ -65,4 +65,5 @@ createApp({
  </main>
  <dialog ref="setupDialog" class="modal" @close="focusScore" @click="($event.target===setupDialog)&&setupDialog.close()"><div class="section-heading"><h2>新比賽</h2><button class="text-button" @click="setupDialog.close()" aria-label="關閉設定">關閉 <kbd>Esc</kbd></button></div><form @submit.prevent="start"><label class="mode-picker">模式<select v-model="mode" autofocus><option v-for="(label,key) in MODES" :key="key" :value="key">{{label}}</option></select></label><div class="form-row"><label v-if="mode==='x01'">起始分數<select v-model="initial"><option :value="301">301</option><option :value="501">501</option><option :value="701">701</option></select></label><label v-else-if="mode==='countup'">回合數<select v-model="roundLimit"><option v-for="n in [8,10,15,20]" :key="n" :value="n">{{n}}</option></select></label><label>人數<select :value="names.length" @change="countPlayers"><option v-for="n in 16" :value="n">{{n}}</option></select></label></div><label v-if="mode==='x01'" class="check"><input type="checkbox" v-model="doubleOut">雙倍結鏢</label><div class="name-list"><label v-for="(_,i) in names" :key="i">玩家 {{i+1}}<input v-model="names[i]" :placeholder="'玩家 '+(i+1)" maxlength="24"></label></div><p class="muted">開始後清除目前比賽。</p><button class="primary" type="submit">開始比賽 <kbd>Enter</kbd></button></form></dialog></div>`
 }).mount('#app');
+
 
