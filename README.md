@@ -1,16 +1,16 @@
-# DART CLUB
+# 飛鏢計分
 
-Vue 3 + Vite 純前端飛鏢計分網頁。
+Vue 3 + Vite 純前端，部署在 https://dart.viecon.site 。
 
-- 1–16 位玩家與自訂名稱
+- 自訂 1–16 位玩家與名稱
 - 301 / 501 / 701，一般或雙倍結鏢
-- 逐鏢輸入、自動換人、爆鏢還原、撤銷
-- 即時三鏢平均、命中率、最高回合、雙倍／三倍命中與回合紀錄
-- 響應式桌面與手機介面
+- 輸入三鏢總分，Enter 記分、自動換人並維持焦點
+- Ctrl / Cmd + Z 撤銷整個回合（包含獲勝、爆鏢）
+- Alt + N 新比賽；設定使用 Tab / Shift+Tab 切換，Enter 開始，Esc 關閉
+- 雙倍結鏢時，用 Alt + D 確認最後一鏢為雙倍，再 Enter 提交
+- 回合平均、最高得分、回合數、爆鏢與回合紀錄
 
-所有比賽資料只保留在當前頁面記憶體，重新整理即清除。爆鏢回合以 0 分計入平均，命中率計算所有非 Miss 投擲（包含爆鏢回合）。
-
-## 開發
+平均按回合計算，爆鏢以 0 分納入。總分無法推斷逐鏢命中率與實際用鏢數，因此不顯示這些統計。重新整理會清除比賽。
 
 ```sh
 npm ci
@@ -19,4 +19,4 @@ npm test
 npm run build
 ```
 
-GitHub Actions 將 main 分支自動建置並部署到 GitHub Pages。自訂網域為 `dart.viecon.site`，DNS 的 `dart` CNAME 應指向 `viecon.github.io`。
+GitHub Actions 將 main 分支部署到 GitHub Pages。DNS：`dart` CNAME → `viecon.github.io`（僅 DNS）。
